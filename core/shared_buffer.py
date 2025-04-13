@@ -1,4 +1,3 @@
-import time
 from multiprocessing.shared_memory import SharedMemory
 from multiprocessing import Lock
 

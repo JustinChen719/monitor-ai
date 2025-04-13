@@ -1,8 +1,6 @@
 import threading
 import time
 
-from queue import Empty, Full
-
 from core.shared_buffer import SharedMemoryManager, Frame
 from utils import get_logger, get_config
 
@@ -21,7 +19,6 @@ class Processor:
             self,
             frame_memory_manager: SharedMemoryManager,
             display_memory_manager: SharedMemoryManager = None,
-            # sample_frequency: int = 30,
             process_frequency: int = 30
     ):
         '''
@@ -38,7 +35,6 @@ class Processor:
         self._sampled_frames: list[SampledFrame] = []
 
         # 执行间隔
-        # self._sample_interval = 1 / sample_frequency
         self._process_interval = 1 / process_frequency
 
         # 执行线程

@@ -7,7 +7,7 @@ from uuid import uuid4
 from core.shared_buffer import SharedMemoryManager
 from core.processor import Processor
 from utils import get_config, get_logger
-from core.stream_core import StreamCore, StreamCoreConfig, FFmpegConfig
+from core.stream_core import StreamCore, StreamCoreConfig, FFmpegConfig, StreamCoreStatus
 
 logger = get_logger(__name__)
 
@@ -29,7 +29,6 @@ class StreamController:
         self.processor = Processor(
                 self.frame_memory_manager,
                 self.display_memory_manager,
-                # sample_frequency=self.config.sample_frequency,
                 process_frequency=self.config.process_frequency
         )
         self.processor.start()
@@ -125,10 +124,19 @@ class StreamController:
             self.frame_memory_manager.remove_buffer(core_id)
             self.display_memory_manager.remove_buffer(core_id)
 
-    def get_core_status(self, core_id: str) -> dict | None:
+    def get_core_status(self, core_id: str) -> StreamCoreStatus | None:
         """
         获取实例状态
         """
         if core := self.cores.get(core_id):
             return core.get_status()
         return None
+
+    def get_all_cores_status(self) -> list[StreamCoreStatus]:
+        """
+        获取所有实例状态
+        """
+        ret = []
+        for core in self.cores.values():
+            ret.append(core.get_status())
+        return ret

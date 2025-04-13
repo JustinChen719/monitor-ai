@@ -31,6 +31,14 @@ class StreamCoreConfig:
     bytes_per_pixel: int = 3
 
 
+@dataclass
+class StreamCoreStatus:
+    core_id: str
+    is_running: bool
+    video_width: int
+    video_height: int
+
+
 class StreamCore:
     def __init__(self, config: StreamCoreConfig):
         self.core_id: str = config.core_id
@@ -125,8 +133,10 @@ class StreamCore:
                 self.thread.join()
                 self.thread = None
 
-    def get_status(self):
-        return {
-            "core_id": self.core_id,
-            "is_running": self.thread and self.thread.is_alive(),
-        }
+    def get_status(self) -> StreamCoreStatus:
+        return StreamCoreStatus(
+                core_id=self.core_id,
+                is_running=self.thread and self.thread.is_alive(),
+                video_width=self.video_width,
+                video_height=self.video_height
+        )

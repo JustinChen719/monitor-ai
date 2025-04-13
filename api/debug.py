@@ -5,7 +5,6 @@ import numpy as np
 
 from starlette.responses import StreamingResponse, Response
 from fastapi import APIRouter
-from fastapi.params import Path, Param
 
 from core import get_stream_controller
 from core.shared_buffer import SharedRingBuffer
@@ -28,21 +27,41 @@ def generate_frames(core_id: str | None):
         logger.error(f"Core {core_id} not found")
         return
 
-    cnt, now, past = 0, 0, 0
+    cnt, now, past, current_fps = 0, 0, 0, 0
     while True:
         frame = buffer.read_frame()
         if frame is None:
             time.sleep(0.05)
             continue
         cnt += 1
+
         image = np.frombuffer(frame.frame_bytes, np.uint8).reshape((frame.video_height, frame.video_width, 3))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        _, data = cv2.imencode('.jpg', image, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
-        yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + data.tobytes() + b'\r\n'
+
+        # 计算FPS
         if cnt != 0 and cnt % 20 == 0:
             now = time.time()
-            logger.debug(f"FPS: {20 / (now - past)}")
+            current_fps = 20 / (now - past)
+            # logger.debug(f"FPS: {current_fps:.1f}")
             past = now
+
+        # 绘制到图像上
+        text = f"FPS: {current_fps:.2f}"
+        cv2.putText(
+                image,
+                text,
+                org=(10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1.0,
+                color=(255, 255, 255),
+                thickness=2,
+                lineType=cv2.LINE_AA
+        )
+
+        # 编码并输出图像
+        _, data = cv2.imencode('.jpg', image, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + data.tobytes() + b'\r\n')
 
 
 @debug.get('/video_stream')
