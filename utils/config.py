@@ -8,9 +8,13 @@ class Config:
     def __init__(self):
         self.debug = bool(os.getenv("DEBUG", False))
         self.api_port = int(os.getenv("API_PORT", 8000))
+
         self.video_output = os.getenv("VIDEO_OUTPUT")
         self.executable = os.getenv("FFMPEG_EXECUTABLE")
         self.stream_server_url = os.getenv("STREAM_SERVER_URL")
+
+        # self.sample_frequency = int(os.getenv("SAMPLE_FREQUENCY", 30))
+        self.process_frequency = int(os.getenv("PROCESS_FREQUENCY", 30))
 
         self._check()
 

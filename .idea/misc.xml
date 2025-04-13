@@ -3,4 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="dt-ai" />
   </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="monitor-ai" project-jdk-type="Python SDK" />
 </project>

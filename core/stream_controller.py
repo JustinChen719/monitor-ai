@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 from uuid import uuid4
 
-from core.frame_queues import FrameQueues
+from core.shared_buffer import SharedMemoryManager
 from core.processor import Processor
 from utils import get_config, get_logger
 from core.stream_core import StreamCore, StreamCoreConfig, FFmpegConfig
@@ -16,17 +16,22 @@ class StreamController:
     def __init__(self):
         self.config = get_config()
         self.cores: dict[str, StreamCore] = {}
-        self.frame_queues: FrameQueues = FrameQueues()  # 帧队列
-        # debug 选项
-        self.display_queues: FrameQueues = FrameQueues()  # 显示队列
 
-        self.processor = Processor(self.frame_queues, self.display_queues)  # 处理器
+        self.frame_memory_manager: SharedMemoryManager = SharedMemoryManager()
+        self.display_memory_manager: SharedMemoryManager = SharedMemoryManager()
 
         # 视频输出目录
         self.video_output_dir = self.config.video_output
         if not os.path.exists(self.video_output_dir):
             os.makedirs(self.video_output_dir, exist_ok=True)
 
+        # AI 处理
+        self.processor = Processor(
+                self.frame_memory_manager,
+                self.display_memory_manager,
+                # sample_frequency=self.config.sample_frequency,
+                process_frequency=self.config.process_frequency
+        )
         self.processor.start()
 
     def create_core(
@@ -55,9 +60,11 @@ class StreamController:
         output_dir = os.path.join(self.video_output_dir, core_id)
         os.makedirs(output_dir, exist_ok=True)
 
-        # 创建
-        frame_queue = self.frame_queues.add_queue(core_id)
-        self.display_queues.add_queue(core_id)
+        # 创建拉流buffer以及显示buffer
+        frame_buffer = self.frame_memory_manager.create_buffer(core_id, video_width, video_height)
+        self.display_memory_manager.create_buffer(core_id, video_width, video_height)
+
+        # 创建core配置和实例
         core_config = StreamCoreConfig(
                 core_id=core_id,
                 key=key,
@@ -85,7 +92,7 @@ class StreamController:
                             ]
                         }
                 ),
-                frame_queue=frame_queue,
+                frame_buffer=frame_buffer,
                 video_width=video_width,
                 video_height=video_height,
                 bytes_per_pixel=bytes_per_pixel
@@ -115,8 +122,8 @@ class StreamController:
         if core := self.cores.get(core_id):
             core.stop()
             del self.cores[core_id]
-            self.frame_queues.remove_queue(core_id)
-            self.display_queues.remove_queue(core_id)
+            self.frame_memory_manager.remove_buffer(core_id)
+            self.display_memory_manager.remove_buffer(core_id)
 
     def get_core_status(self, core_id: str) -> dict | None:
         """

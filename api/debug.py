@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import numpy as np
 
@@ -6,6 +8,7 @@ from fastapi import APIRouter
 from fastapi.params import Path, Param
 
 from core import get_stream_controller
+from core.shared_buffer import SharedRingBuffer
 from utils import get_logger
 
 logger = get_logger(__name__)
@@ -15,22 +18,31 @@ debug = APIRouter(prefix="/debug")
 
 def generate_frames(core_id: str | None):
     stream_controller = get_stream_controller()
-    queues = stream_controller.display_queues.get_all_queues()
+    buffers = stream_controller.display_memory_manager.get_all_buffers()
     if core_id is not None:
-        frame_queue = queues.get(core_id)
+        buffer: SharedRingBuffer | None = buffers.get(core_id)
     else:
-        frame_queue = next(iter(queues.values()), None)  # 默认取第一个存在的队列
+        buffer: SharedRingBuffer | None = next(iter(buffers.values()), None)  # 默认取第一个存在的队列
 
-    if frame_queue is None:
+    if buffer is None:
         logger.error(f"Core {core_id} not found")
         return
 
+    cnt, now, past = 0, 0, 0
     while True:
-        frame = frame_queue.get()
-        image = np.frombuffer(frame.frame_bytes, np.uint8).reshape((720, 1280, 3))
+        frame = buffer.read_frame()
+        if frame is None:
+            time.sleep(0.05)
+            continue
+        cnt += 1
+        image = np.frombuffer(frame.frame_bytes, np.uint8).reshape((frame.video_height, frame.video_width, 3))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        _, buffer = cv2.imencode('.jpg', image, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
-        yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n'
+        _, data = cv2.imencode('.jpg', image, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+        yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + data.tobytes() + b'\r\n'
+        if cnt != 0 and cnt % 20 == 0:
+            now = time.time()
+            logger.debug(f"FPS: {20 / (now - past)}")
+            past = now
 
 
 @debug.get('/video_stream')
