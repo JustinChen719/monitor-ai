@@ -21,19 +21,20 @@ class FFmpegConfig:
 @dataclass
 class StreamCoreConfig:
     core_id: str  # 唯一标识符
-    key: str  # 推流源的 key
+    ip: str  # 推流源的 ip
     ffmpeg_config: FFmpegConfig  # ffmpeg 配置
     frame_buffer: SharedRingBuffer  # 拉流提取缓冲区
 
     # 流视频参数
-    video_width: int = 1280
-    video_height: int = 720
+    video_width: int = 640
+    video_height: int = 360
     bytes_per_pixel: int = 3
 
 
 @dataclass
 class StreamCoreStatus:
     core_id: str
+    ip: str
     is_running: bool
     video_width: int
     video_height: int
@@ -42,7 +43,7 @@ class StreamCoreStatus:
 class StreamCore:
     def __init__(self, config: StreamCoreConfig):
         self.core_id: str = config.core_id
-        self.key: str = config.key
+        self.ip: str = config.ip
         self.ffmpeg_config: FFmpegConfig = config.ffmpeg_config
         self.frame_buffer: SharedRingBuffer = config.frame_buffer
 
@@ -78,7 +79,7 @@ class StreamCore:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,
             )
-            logger.info(f"核心: {self.core_id},开始监听推流源: {self.key}")
+            logger.info(f"核心: {self.core_id},开始监听推流源: {self.ip}")
             logger.info(f"FFmpeg 命令: {cmd}")
 
             if self.process.stderr:
@@ -136,6 +137,7 @@ class StreamCore:
     def get_status(self) -> StreamCoreStatus:
         return StreamCoreStatus(
                 core_id=self.core_id,
+                ip=self.ip,
                 is_running=self.thread and self.thread.is_alive(),
                 video_width=self.video_width,
                 video_height=self.video_height

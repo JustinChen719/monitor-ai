@@ -1,5 +1,4 @@
 import time
-
 import cv2
 import numpy as np
 
@@ -50,16 +49,16 @@ def generate_frames(core_id: str | None):
         cv2.putText(
                 image,
                 text,
-                org=(10, 30),
+                org=(10, 70),
                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                fontScale=1.0,
+                fontScale=0.5,
                 color=(255, 255, 255),
                 thickness=2,
                 lineType=cv2.LINE_AA
         )
 
         # 编码并输出图像
-        _, data = cv2.imencode('.jpg', image, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        _, data = cv2.imencode('.jpg', image)
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + data.tobytes() + b'\r\n')
 

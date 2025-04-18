@@ -10,14 +10,22 @@ option = APIRouter(prefix="/option")
 
 @option.post("/create_core")
 async def create_core(
-        key: str = Body(...),
-        video_width: int = Body(default=1280),
-        video_height: int = Body(default=720),
+        username: str = Body(...),
+        password: str = Body(...),
+        ip: str = Body(...),
+        port: int = Body(default=554),
+        path: str = Body(default="/Streaming/Channels/102"),
+        video_width: int = Body(default=640),
+        video_height: int = Body(default=360),
         bytes_per_pixel: int = Body(default=3),
         stream_controller: StreamController = Depends(get_stream_controller)
 ):
     core_id = stream_controller.create_core(
-            key=key,
+            username=username,
+            password=password,
+            ip=ip,
+            port=port,
+            path=path,
             video_width=video_width,
             video_height=video_height,
             bytes_per_pixel=bytes_per_pixel

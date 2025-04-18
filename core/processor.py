@@ -25,7 +25,6 @@ class Processor:
         处理器，对拉流过来的视频帧进行采样、AI处理。
         :param frame_memory_manager: 拉流原始数据
         :param display_memory_manager: 用于debug演示处理效果
-        # :param sample_frequency: 采样频率，理论每秒采样多少次
         :param process_frequency: 处理频率，理论每秒处理多少次
         '''
         self._frame_memory_manager = frame_memory_manager

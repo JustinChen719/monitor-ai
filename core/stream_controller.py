@@ -19,12 +19,7 @@ class StreamController:
 
         self.frame_memory_manager: SharedMemoryManager = SharedMemoryManager()
         self.display_memory_manager: SharedMemoryManager = SharedMemoryManager()
-
-        # 视频输出目录
-        self.video_output_dir = self.config.video_output
-        if not os.path.exists(self.video_output_dir):
-            os.makedirs(self.video_output_dir, exist_ok=True)
-
+  
         # AI 处理
         self.processor = Processor(
                 self.frame_memory_manager,
@@ -35,14 +30,22 @@ class StreamController:
 
     def create_core(
             self,
-            key: str,
-            video_width=1280,
-            video_height=720,
-            bytes_per_pixel=3,
+            username: str,
+            password: str,
+            ip: str,
+            port: int = 554,
+            path: str = "/Streaming/Channels/102",
+            video_width: int = 640,
+            video_height: int = 360,
+            bytes_per_pixel: int = 3,
     ) -> str:
         '''
         创建core实例
-        :param key:
+        :param username:
+        :param password:
+        :param ip:
+        :param port:
+        :param path:
         :param video_width:
         :param video_height:
         :param bytes_per_pixel:
@@ -50,40 +53,36 @@ class StreamController:
         '''
         # 查重
         for core_id, core in self.cores.items():
-            if core.key == key:
-                logger.warning(f"core {key} already exists")
+            if core.ip == ip:
+                logger.warning(f"core {core_id} with ip {ip} already exists")
                 core.start()
                 return core_id
 
         core_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4()}"
-        output_dir = os.path.join(self.video_output_dir, core_id)
-        os.makedirs(output_dir, exist_ok=True)
+
+        # # 路径
+        # save_dir = os.path.join(self.video_output_dir, "save", core_id)
+        # live_dir = os.path.join(self.video_output_dir, "live", core_id)
+        # os.makedirs(save_dir, exist_ok=True)
+        # os.makedirs(live_dir, exist_ok=True)
 
         # 创建拉流buffer以及显示buffer
         frame_buffer = self.frame_memory_manager.create_buffer(core_id, video_width, video_height)
         self.display_memory_manager.create_buffer(core_id, video_width, video_height)
 
         # 创建core配置和实例
+        url = f"rtsp://{username}:{password}@{ip}:{port}{path}"
         core_config = StreamCoreConfig(
                 core_id=core_id,
-                key=key,
+                ip=ip,
                 ffmpeg_config=FFmpegConfig(
                         executable=self.config.executable,
-                        inputs={f"{self.config.stream_server_url}{key}": ["-listen", "1"]},
+                        inputs={
+                            url: [
+                                "-rtsp_transport", "tcp",
+                            ]
+                        },
                         outputs={
-                            # 分片 TS 文件
-                            f"{output_dir}/output.m3u8": [  # HLS 播放列表
-                                "-c", "copy",  # 直接拷贝编码，不转码
-                                "-f", "hls",
-                                "-hls_time", "10",  # 每个分片时长 10 秒
-                                "-hls_list_size", "0",  # 保留所有分片（不限制数量）
-                                "-hls_segment_filename", f"{output_dir}/segment_%03d.ts",  # 分片文件名格式
-                                "-hls_flags", "delete_segments",  # 可选：自动清理旧分片（根据需求选择）
-                                "-g", "250",  # 关键帧间隔（假设 25fps → 10 秒）
-                                "-keyint_min", "250",
-                                "-sc_threshold", "0"  # 强制按 GOP 分割分片
-                            ],
-                            # 管道输出
                             "pipe:1": [
                                 "-f", "rawvideo",  # 格式：原始视频
                                 "-pix_fmt", "rgb24",  # 像素格式
