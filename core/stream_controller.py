@@ -1,7 +1,3 @@
-import threading, os
-import time
-
-from datetime import datetime
 from uuid import uuid4
 
 from core.shared_buffer import SharedMemoryManager
@@ -19,7 +15,7 @@ class StreamController:
 
         self.frame_memory_manager: SharedMemoryManager = SharedMemoryManager()
         self.display_memory_manager: SharedMemoryManager = SharedMemoryManager()
-  
+
         # AI 处理
         self.processor = Processor(
                 self.frame_memory_manager,
@@ -58,7 +54,7 @@ class StreamController:
                 core.start()
                 return core_id
 
-        core_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4()}"
+        core_id = str(uuid4())
 
         # # 路径
         # save_dir = os.path.join(self.video_output_dir, "save", core_id)
@@ -79,7 +75,7 @@ class StreamController:
                         executable=self.config.executable,
                         inputs={
                             url: [
-                                "-rtsp_transport", "tcp",
+                                "-rtsp_transport", "udp",
                             ]
                         },
                         outputs={
@@ -99,21 +95,25 @@ class StreamController:
         self.cores[core_id].start()
         return core_id
 
-    def start_core(self, core_id: str) -> None:
+    def start_core(self, core_id: str) -> bool:
         """
         启动指定实例
         """
         if core := self.cores.get(core_id):
             core.start()
+            return True
+        return False
 
-    def stop_core(self, core_id: str) -> None:
+    def stop_core(self, core_id: str) -> bool:
         """
         停止指定实例
         """
         if core := self.cores.get(core_id):
             core.stop()
+            return True
+        return False
 
-    def delete_core(self, core_id: str) -> None:
+    def delete_core(self, core_id: str) -> bool:
         """
         删除指定实例
         """
@@ -122,6 +122,17 @@ class StreamController:
             del self.cores[core_id]
             self.frame_memory_manager.remove_buffer(core_id)
             self.display_memory_manager.remove_buffer(core_id)
+            return True
+        return False
+
+    # def enable_ai(self, core_id: str, enable_ai: bool) -> bool:
+    #     """
+    #     启停AI
+    #     """
+    #     if core := self.cores.get(core_id):
+    #         core.enable_ai = enable_ai
+    #         return True
+    #     return False
 
     def get_core_status(self, core_id: str) -> StreamCoreStatus | None:
         """

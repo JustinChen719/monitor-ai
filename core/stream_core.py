@@ -35,9 +35,12 @@ class StreamCoreConfig:
 class StreamCoreStatus:
     core_id: str
     ip: str
-    is_running: bool
     video_width: int
     video_height: int
+    bytes_per_pixel: int
+
+    is_running: bool
+    enable_ai: bool
 
 
 class StreamCore:
@@ -46,6 +49,8 @@ class StreamCore:
         self.ip: str = config.ip
         self.ffmpeg_config: FFmpegConfig = config.ffmpeg_config
         self.frame_buffer: SharedRingBuffer = config.frame_buffer
+
+        self.enable_ai: bool = True  # 是否加入frame_buffer进行ai识别
 
         # ffmpeg配置 和 子进程
         self.ffmpeg: FFmpeg = FFmpeg(
@@ -138,7 +143,9 @@ class StreamCore:
         return StreamCoreStatus(
                 core_id=self.core_id,
                 ip=self.ip,
-                is_running=self.thread and self.thread.is_alive(),
                 video_width=self.video_width,
-                video_height=self.video_height
+                video_height=self.video_height,
+                bytes_per_pixel=self.bytes_per_pixel,
+                is_running=self.thread and self.thread.is_alive(),
+                enable_ai=self.enable_ai
         )

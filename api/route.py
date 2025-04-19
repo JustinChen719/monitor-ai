@@ -21,7 +21,7 @@ async def status(
 ):
     core_status = stream_controller.get_core_status(core_id)
     if core_status is None:
-        return create_err_response("Core not found")
+        return create_err_response("未找到该Core")
     return create_ok_response(core_status)
 
 
